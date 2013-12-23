@@ -38,7 +38,7 @@ namespace Participle_NLPIR
         const string path = @"D:\Study\Visual_Studio_Workspace\Participle_NLPIR\Participle_NLPIR\NLPIR\bin\ICTCLAS2014\NLPIR.dll";
 
         //给出Data文件所在的路径，注意根据实际情况修改
-        const string dataPath = @"D:\Study\Visual_Studio_Workspace\Participle_NLPIR\Participle_NLPIR\NLPIR\";
+        const string dataPath = @"..\..\NLPIR\";
 
         [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_Init", CallingConvention = CallingConvention.Cdecl)]
         public static extern bool NLPIR_Init(String sInitDirPath, int encoding);
@@ -99,20 +99,24 @@ namespace Participle_NLPIR
             Init_NLPIR();
         }
 
+        ~Participle() 
+        {
+            NLPIR_Exit();
+        }
+
         public bool Init_NLPIR()
         {
             if (!NLPIR_Init(dataPath, 0))
             {
                 System.Console.WriteLine("Init ICTCLAS failed!");
                 this.isInitSuccess = false;
-                return false;
             }
             else
             {
                 System.Console.WriteLine("Init ICTCLAS success!");
                 this.isInitSuccess = true;
-                return true;
             }
+            return this.isInitSuccess;
         }
 
 
@@ -123,10 +127,18 @@ namespace Participle_NLPIR
             {
                 return;
             }
+
+            // 空内容直接返回
+            s = s.Trim();
+            if (s.Equals(""))
+            {
+                return;
+            }
             
             //String s = "ICTCLAS在高富帅国内973专家组组织的评测中活动获得了第一名，在第一届国际中文处理研究机构SigHan组织的评测中都获得了多项第一名。";
 
             //先得到结果的词数
+            /*
             int count = NLPIR_GetParagraphProcessAWordCount(s);
             System.Console.WriteLine("NLPIR_GetParagraphProcessAWordCount success!");
             result_t[] result = new result_t[count];//在客户端申请资源
@@ -135,7 +147,6 @@ namespace Participle_NLPIR
             int i = 1;
             foreach (result_t r in result)
             {
-                Console.WriteLine("word_type:{0}", r.word_type);
                 String sWhichDic = "";
                 switch (r.word_type)
                 {
@@ -151,11 +162,14 @@ namespace Participle_NLPIR
                     default:
                         break;
                 }
-                //Console.WriteLine("No.{0}:start:{1}, length:{2},POS_ID:{3},Word_ID:{4}, UserDefine:{5}\n", i++, r.start, r.length, r.POS_id, r.word_ID, sWhichDic);//, s.Substring(r.start, r.length)
+                Console.WriteLine("No.{0}:start:{1}, length:{2},POS_ID:{3},Word_ID:{4}, UserDefine:{5}\n", i++, r.start, r.length, r.POS_id, r.word_ID, sWhichDic);//, s.Substring(r.start, r.length)
             }
+            */
+            //StringBuilder sResult = new StringBuilder(6000); //准备存储空间
 
-            //StringBuilder sResult = new StringBuilder(600); //准备存储空间
-             
+            //NLPIR_FileProcess("output.txt", "result.txt");
+
+            
             IntPtr intPtr = NLPIR_ParagraphProcess(s);      //切分结果保存为IntPtr类型
             String str = Marshal.PtrToStringAnsi(intPtr);   //将切分结果转换为string
             Console.WriteLine(str);
@@ -198,7 +212,6 @@ namespace Participle_NLPIR
             NLPIR_NWI_Result2UserDict();//新词识别结果导入分词库
             NLPIR_FileProcess("../test/屌丝，一个字头的诞生.TXT", "../test/屌丝，一个字头的诞生-自适应分词结果.TXT");
             */
-            NLPIR_Exit();
         }
     }
 }

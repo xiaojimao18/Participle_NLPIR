@@ -12,6 +12,7 @@ namespace NLPOOV
 {
     class Program
     {
+        Participle participle = new Participle();
         HTTPTool httptool = new HTTPTool();
         string filename = "output.txt"; //输出文件，测试用
 
@@ -20,7 +21,7 @@ namespace NLPOOV
         //注意，由于是html文档，符号会用&XXX表示
         public void Extract(string html)
         {
-            Participle participle = new Participle();
+            
             StreamWriter sw = File.AppendText(filename);
             try
             {
@@ -41,9 +42,12 @@ namespace NLPOOV
                             if (flag == 0 && st >= bg)
                             {
                                 String content = html.Substring(st, i - st);
-                                Console.WriteLine(content);
+                                if (!content.Trim().Equals(""))
+                                {
+                                    Console.WriteLine("content: " + content);
+                                    participle.Participle_NLPIR(content);
+                                }
                                 sw.Write(content);
-                                participle.Participle_NLPIR(content);
                             }
                             flag++;
                         }
@@ -122,6 +126,7 @@ namespace NLPOOV
             cookieCol.Add(new Cookie("hd_auth", "6a06tweRW2xGI5oKzQC%2B6uwsC7Tskd1vd1qX4wYpyqDy", "/", "bitpt.cn"));
             cookieCol.Add(new Cookie("WRoT_2132_nofavfid", "1", "/", "bitpt.cn"));
             cookieCol.Add(new Cookie("WRoT_2132_ulastactivity", "99fceDxfwPq3KZ%2Frm4RdJCqIQdayfHMRFmrIeD7WH2ziykkTgmUA", "/", "bitpt.cn"));
+
             return cookieCol;
         }
     }
