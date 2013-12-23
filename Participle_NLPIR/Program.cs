@@ -1,190 +1,128 @@
 ﻿using System;
-using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
+using System.Collections;
+using System.IO;
+using System.Net;
+using Participle_NLPIR;
 
-namespace Participle_NLPIR
+namespace NLPOOV
 {
-    [StructLayout(LayoutKind.Explicit)]
-    public struct result_t
-    {
-        [FieldOffset(0)]
-        public int start;
-        [FieldOffset(4)]
-        public int length;
-        [FieldOffset(8)]
-        public int sPos1;
-        [FieldOffset(12)]
-        public int sPos2;
-        [FieldOffset(16)]
-        public int sPos3;
-        [FieldOffset(20)]
-        public int sPos4;
-        [FieldOffset(24)]
-        public int sPos5;
-        [FieldOffset(28)]
-        public int sPos6;
-        [FieldOffset(32)]
-        public int sPos7;
-        [FieldOffset(36)]
-        public int sPos8;
-        [FieldOffset(40)]
-        public int sPos9;
-        [FieldOffset(44)]
-        public int sPos10;
-        //[FieldOffset(12)] public int sPosLow;
-        [FieldOffset(48)]
-        public int POS_id;
-        [FieldOffset(52)]
-        public int word_ID;
-        [FieldOffset(56)]
-        public int word_type;
-        [FieldOffset(60)]
-        public double weight;
-    }
-
     class Program
     {
-        const string path = @"D:\Study\Visual_Studio_Workspace\Participle_NLPIR\Participle_NLPIR\NLPIR\bin\ICTCLAS2014\NLPIR.dll";
+        HTTPTool httptool = new HTTPTool();
+        string filename = "output.txt"; //输出文件，测试用
 
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_Init", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool NLPIR_Init(String sInitDirPath, int encoding);
+        //分析html文档，抽取其中的“文字部分”，输出到文件
+        //具体是将贴子里用户发言div块中的非标签部分抽取出来
+        //注意，由于是html文档，符号会用&XXX表示
+        public void Extract(string html)
+        {
+            Participle participle = new Participle();
+            StreamWriter sw = File.AppendText(filename);
+            try
+            {
+                int bg = 0, ed = 0, st, i, flag;
+                while (bg >= 0 && ed >= 0)
+                {
+                    bg = html.IndexOf("<div class=\"t_fsz\">", ed + 1);
+                    if (bg < 0) break;
+                    ed = html.IndexOf("</div>", bg + 1);
+                    if (ed < 0) break;
 
-        //特别注意，C语言的函数NLPIR_API const char * NLPIR_ParagraphProcess(const char *sParagraph,int bPOStagged=1);必须对应下面的申明
-        //[DllImport(path, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Winapi, EntryPoint = "NLPIR_ParagraphProcess")]
-        [DllImport(path, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl, EntryPoint = "NLPIR_ParagraphProcess")]
-        public static extern IntPtr NLPIR_ParagraphProcess(String sParagraph, int bPOStagged = 1);
+                    flag = 0;
+                    st = -1;
+                    for (i = bg; i < ed; i++)
+                    {
+                        if (html[i] == '<')
+                        {
+                            if (flag == 0 && st >= bg)
+                            {
+                                String content = html.Substring(st, i - st);
+                                Console.WriteLine(content);
+                                sw.Write(content);
+                                participle.Participle_NLPIR(content);
+                            }
+                            flag++;
+                        }
+                        else if (html[i] == '>')
+                        {
+                            flag--;
+                            if (flag == 0)
+                            {
+                                st = i + 1;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e.ToString());
+            }
+            finally
+            {
+                sw.Close();
+            }
+        }
+        
+        //遍历论坛帖子
+        public void SearchForum()
+        {
+            string url = "http://bitpt.cn/bbs/forum.php";
+            Hashtable param = new Hashtable();
+            param.Add("mod", "viewthread");
+            param.Add("tid", "300000"); //帖子id会在后面被替换
+            
+            int tnum = 3000;
+            for (int i = 100000; i < 100000 + tnum; i++) //遍历帖子id
+            {
+                param["tid"] = i.ToString();
 
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_Exit", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool NLPIR_Exit();
-
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_ImportUserDict", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int NLPIR_ImportUserDict(String sFilename);
-
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_FileProcess", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool NLPIR_FileProcess(String sSrcFilename, String sDestFilename, int bPOStagged = 1);
-
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_FileProcessEx", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool NLPIR_FileProcessEx(String sSrcFilename, String sDestFilename);
-
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_GetParagraphProcessAWordCount", CallingConvention = CallingConvention.Cdecl)]
-        static extern int NLPIR_GetParagraphProcessAWordCount(String sParagraph);
-
-        //NLPIR_GetParagraphProcessAWordCount
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_ParagraphProcessAW", CallingConvention = CallingConvention.Cdecl)]
-        static extern void NLPIR_ParagraphProcessAW(int nCount, [Out, MarshalAs(UnmanagedType.LPArray)] result_t[] result);
-
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_AddUserWord", CallingConvention = CallingConvention.Cdecl)]
-        static extern int NLPIR_AddUserWord(String sWord);
-
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_SaveTheUsrDic", CallingConvention = CallingConvention.Cdecl)]
-        static extern int NLPIR_SaveTheUsrDic();
-
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_DelUsrWord", CallingConvention = CallingConvention.Cdecl)]
-        static extern int NLPIR_DelUsrWord(String sWord);
-
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_NWI_Start", CallingConvention = CallingConvention.Cdecl)]
-        static extern bool NLPIR_NWI_Start();
-
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_NWI_Complete", CallingConvention = CallingConvention.Cdecl)]
-        static extern bool NLPIR_NWI_Complete();
-
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_NWI_AddFile", CallingConvention = CallingConvention.Cdecl)]
-        static extern bool NLPIR_NWI_AddFile(String sText);
-
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_NWI_AddMem", CallingConvention = CallingConvention.Cdecl)]
-        static extern bool NLPIR_NWI_AddMem(String sText);
-
-        [DllImport(path, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Winapi, EntryPoint = "NLPIR_NWI_GetResult")]
-        public static extern IntPtr NLPIR_NWI_GetResult(bool bWeightOut = false);
-
-        [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_NWI_Result2UserDict", CallingConvention = CallingConvention.Cdecl)]
-        static extern uint NLPIR_NWI_Result2UserDict();
+                try
+                {
+                    Extract(httptool.GetHTML(url, param)); //获取该帖子html文档并分析
+                }
+                catch (Exception e)
+                {
+                    Console.Error.WriteLine(e.ToString());
+                }
+            }
+        }
 
         static void Main(string[] args)
         {
-            if (!NLPIR_Init(@"D:\Study\Visual_Studio_Workspace\Participle_NLPIR\Participle_NLPIR\NLPIR\", 0))//给出Data文件所在的路径，注意根据实际情况修改。
-            {
-                System.Console.WriteLine("Init ICTCLAS failed!");
-                return;
-            }
-            System.Console.WriteLine("Init ICTCLAS success!");
+            Program program = new Program();
 
-            String s = "ICTCLAS在高富帅国内973专家组组织的评测中活动获得了第一名，在第一届国际中文处理研究机构SigHan组织的评测中都获得了多项第一名。";
+            program.httptool.cc.Add(cookieData()); //手动加入需要用到的cookie
+            program.SearchForum();
 
-            //先得到结果的词数
-            int count = NLPIR_GetParagraphProcessAWordCount(s);
-            System.Console.WriteLine("NLPIR_GetParagraphProcessAWordCount success!");
-            result_t[] result = new result_t[count];//在客户端申请资源
-            NLPIR_ParagraphProcessAW(count, result);//获取结果存到客户的内存中
-            int i = 1;
-            foreach (result_t r in result)
-            {
-                Console.WriteLine("word_type:{0}", r.word_type);
-                String sWhichDic = "";
-                switch (r.word_type)
-                {
-                    case 0:
-                        sWhichDic = "核心词典";
-                        break;
-                    case 1:
-                        sWhichDic = "用户词典";
-                        break;
-                    case 2:
-                        sWhichDic = "专业词典";
-                        break;
-                    default:
-                        break;
-                }
-                Console.WriteLine("No.{0}:start:{1}, length:{2},POS_ID:{3},Word_ID:{4}, UserDefine:{5}\n", i++, r.start, r.length, r.POS_id, r.word_ID, sWhichDic);//, s.Substring(r.start, r.length)
-            }
+            Console.ReadKey();
+        }
 
-            StringBuilder sResult = new StringBuilder(600);
-            //准备存储空间 
-            IntPtr intPtr = NLPIR_ParagraphProcess(s);//切分结果保存为IntPtr类型
-            String str = Marshal.PtrToStringAnsi(intPtr);//将切分结果转换为string
-            Console.WriteLine(str);
-            System.Console.WriteLine("Before Userdict imported:");
-            String ss;
-            Console.WriteLine("insert user dic:");
-            ss = Console.ReadLine();
-            while (!ss.Equals("") && ss[0] != 'q' && ss[0] != 'Q')
-            {
-                //用户词典中添加词
-                int iiii = NLPIR_AddUserWord(ss);//词 词性 example:点击下载 vyou
-                intPtr = NLPIR_ParagraphProcess(s, 1);
-                str = Marshal.PtrToStringAnsi(intPtr);
-                System.Console.WriteLine(str);
-                NLPIR_SaveTheUsrDic(); // save the user dictionary to the file
+        static CookieCollection cookieData()
+        {
+            CookieCollection cookieCol = new CookieCollection();
 
-                //删除用户词典中的词
-                Console.WriteLine("delete usr dic:");
-                ss = Console.ReadLine();
-                iiii = NLPIR_DelUsrWord(ss);
-                str = Marshal.PtrToStringAnsi(intPtr);
-                System.Console.WriteLine(str);
-                NLPIR_SaveTheUsrDic();
-            }
-            /*
-            //测试新词发现与自适应分词功能
-            NLPIR_NWI_Start();//新词发现功能启动
-            NLPIR_NWI_AddFile("./NLPIR/test/test.TXT");//添加一个待发现新词的文件，可反复添加
-            NLPIR_NWI_Complete();//新词发现完成
-
-
-            intPtr = NLPIR_NWI_GetResult();
-            str = Marshal.PtrToStringAnsi(intPtr);
-
-            System.Console.WriteLine("新词识别结果:");
-            System.Console.WriteLine(str);
-            NLPIR_FileProcess("../test/屌丝，一个字头的诞生.TXT", "../test/屌丝，一个字头的诞生-分词结果.TXT");
-            NLPIR_NWI_Result2UserDict();//新词识别结果导入分词库
-            NLPIR_FileProcess("../test/屌丝，一个字头的诞生.TXT", "../test/屌丝，一个字头的诞生-自适应分词结果.TXT");
-            */
-            NLPIR_Exit();
+            cookieCol.Add(new Cookie("WRoT_2132_sid","i7vnFG", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("WRoT_2132_saltkey", "SIdJzwYo", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("WRoT_2132_lastvisit", "1387725179", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("WRoT_2132_lastact", "1387728807%09forum.php%09", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("WRoT_2132_sendmail", "1", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("PHPSESSID", "8d999cc05ab62359f6f445b5ba677f21", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("btuid", "243", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("btpassword", "f6fe8cf776944423a5f9ba7d3e7bb35e", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("WL7ID_username", "cmonkey", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("WL7ID_activationauth", "MzI4CWNtb25rZXk%3D", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("hd_sid", "OPas3x", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("hd_hid", "0", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("WRoT_2132_auth", "d160rrwTSFJQA%2FdThM%2BFhZZ49fyPfW3yl%2FWiYiV0pP8LjMaKhJ%2BzrKm21JQLsgnjidrBo2OdCtbHN%2F28K6IUlw0", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("hd_auth", "6a06tweRW2xGI5oKzQC%2B6uwsC7Tskd1vd1qX4wYpyqDy", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("WRoT_2132_nofavfid", "1", "/", "bitpt.cn"));
+            cookieCol.Add(new Cookie("WRoT_2132_ulastactivity", "99fceDxfwPq3KZ%2Frm4RdJCqIQdayfHMRFmrIeD7WH2ziykkTgmUA", "/", "bitpt.cn"));
+            return cookieCol;
         }
     }
 }
