@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -31,14 +32,20 @@ namespace Participle_NLPIR
 
     class Participle
     {
+        //词的表和词的频率
+        Hashtable wordTable = new Hashtable();
+        
         //是否初始化成功
         bool isInitSuccess = false;
 
         //dll文件所在的路径，注意根据实际情况修改
-        const string path = @"D:\Study\Visual_Studio_Workspace\Participle_NLPIR\Participle_NLPIR\NLPIR\bin\ICTCLAS2014\NLPIR.dll";
+        const string path = @".\NLPIR\bin\ICTCLAS2014\NLPIR.dll";
 
         //给出Data文件所在的路径，注意根据实际情况修改
-        const string dataPath = @"..\..\NLPIR\";
+        const string dataPath = @".\NLPIR\";
+
+        //词频输出文件
+        const string resultFile = @".\result2000_v2.txt";
 
         [DllImport(path, CharSet = CharSet.Ansi, EntryPoint = "NLPIR_Init", CallingConvention = CallingConvention.Cdecl)]
         public static extern bool NLPIR_Init(String sInitDirPath, int encoding);
@@ -119,7 +126,7 @@ namespace Participle_NLPIR
             return this.isInitSuccess;
         }
 
-
+        //分词
         public void Participle_NLPIR(string s)
         {
             // 判断初始化是否成功
@@ -172,7 +179,25 @@ namespace Participle_NLPIR
             
             IntPtr intPtr = NLPIR_ParagraphProcess(s);      //切分结果保存为IntPtr类型
             String str = Marshal.PtrToStringAnsi(intPtr);   //将切分结果转换为string
-            Console.WriteLine(str);
+            //Console.WriteLine(str);
+
+            String[] words = str.Split(' ');
+
+            foreach(String word in words)
+            {
+                //String word = wordOld.Trim().Split('/')[0];
+                if (!word.Trim().Equals(""))
+                {
+                    if (wordTable.ContainsKey(word))
+                    {
+                        wordTable[word] = Convert.ToInt32(wordTable[word]) + 1;
+                    }
+                    else
+                    {
+                        wordTable.Add(word, "1");
+                    }
+                }
+            }
 
             /*
             System.Console.WriteLine("Before Userdict imported:");
@@ -212,6 +237,25 @@ namespace Participle_NLPIR
             NLPIR_NWI_Result2UserDict();//新词识别结果导入分词库
             NLPIR_FileProcess("../test/屌丝，一个字头的诞生.TXT", "../test/屌丝，一个字头的诞生-自适应分词结果.TXT");
             */
+        }
+
+        public void OutputResult()
+        {
+            StreamWriter sw = File.AppendText(resultFile);
+
+            for (IDictionaryEnumerator enu = wordTable.GetEnumerator(); enu.MoveNext() == true; )
+            {
+                sw.WriteLine(enu.Key + " " + enu.Value);
+            }
+
+            sw.Close();
+        }
+
+        public void addUserWord(String ss)
+        {
+            int iiii = NLPIR_AddUserWord(ss);//词 词性 example:点击下载 vyou
+            System.Console.WriteLine("Add new word:" + ss);
+            NLPIR_SaveTheUsrDic(); // save the user dictionary to the file
         }
     }
 }

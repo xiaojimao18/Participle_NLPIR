@@ -14,7 +14,7 @@ namespace NLPOOV
     {
         Participle participle = new Participle();
         HTTPTool httptool = new HTTPTool();
-        string filename = "output.txt"; //输出文件，测试用
+        string filename = "Forum10000.txt"; //输出文件，测试用
 
         //分析html文档，抽取其中的“文字部分”，输出到文件
         //具体是将贴子里用户发言div块中的非标签部分抽取出来
@@ -42,11 +42,12 @@ namespace NLPOOV
                             if (flag == 0 && st >= bg)
                             {
                                 String content = html.Substring(st, i - st);
+                                /*
                                 if (!content.Trim().Equals(""))
                                 {
-                                    Console.WriteLine("content: " + content);
                                     participle.Participle_NLPIR(content);
                                 }
+                                 */
                                 sw.Write(content);
                             }
                             flag++;
@@ -80,11 +81,11 @@ namespace NLPOOV
             param.Add("mod", "viewthread");
             param.Add("tid", "300000"); //帖子id会在后面被替换
             
-            int tnum = 3000;
+            int tnum = 10000;
             for (int i = 100000; i < 100000 + tnum; i++) //遍历帖子id
             {
                 param["tid"] = i.ToString();
-
+                Console.WriteLine(i);
                 try
                 {
                     Extract(httptool.GetHTML(url, param)); //获取该帖子html文档并分析
@@ -98,10 +99,20 @@ namespace NLPOOV
 
         static void Main(string[] args)
         {
+            /*
             Program program = new Program();
 
             program.httptool.cc.Add(cookieData()); //手动加入需要用到的cookie
             program.SearchForum();
+            */
+            Participle participle = new Participle();
+            StreamReader sr = File.OpenText("Forum2000.txt");
+
+            while(sr.Peek() >= 0) {
+                participle.Participle_NLPIR(sr.ReadLine());
+            }
+            participle.OutputResult();
+            Console.WriteLine("done.");
 
             Console.ReadKey();
         }
