@@ -1,7 +1,7 @@
 Participle_NLPIR
 ================
 
-官方NLPIR分词系统：[点击这里](https://github.com/NLPIR-team/NLPIR)
+官方NLPIR分词系统：[官网](http://www.nlpir.org/) 以及 [Github官方地址](https://github.com/NLPIR-team/NLPIR)
 
 NLPIR分词系统
 
